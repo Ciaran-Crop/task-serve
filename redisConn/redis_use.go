@@ -48,3 +48,15 @@ func RedisGet(key string) (string, error) {
 	}
 	return str, nil
 }
+
+func RedisIncr(key string) (int, error) {
+	val, err := rdb.IncrBy(ctx, key, 1).Result()
+	if err != nil {
+		return 0, err
+	}
+	return int(val), nil
+}
+
+func RedisDel(key string) {
+	rdb.Del(ctx, key)
+}

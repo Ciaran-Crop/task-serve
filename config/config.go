@@ -1,5 +1,9 @@
 package config
 
+import (
+	"fmt"
+)
+
 const HOST string = "localhost"
 const REDIS_PORT int = 6379
 const RABBIT_PORT int = 5672
@@ -24,5 +28,5 @@ const (
 )
 
 func (t Task) String() string {
-	return "Task Name: " + t.TaskName + ", Task Id: " + t.TaskId + ", Task Command: " + t.TaskCommand
+	return fmt.Sprintf("TaskName: %s, TaskId: %s, TaskCommand: %s\n", t.TaskName, t.TaskId, t.TaskCommand)
 }

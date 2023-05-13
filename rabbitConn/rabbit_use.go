@@ -65,13 +65,12 @@ func ProduceTask(task config.Task) error {
 	return nil
 }
 
-func Consume() config.Task {
+func Consume() (*amqp.Channel, <-chan amqp.Delivery) {
 	// 获取channel
 	ch, err := rbmq.Channel()
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer ch.Close()
 	// 创建队列
 	q, err := ch.QueueDeclare(
 		config.RABBIT_MQ_NAME,
@@ -95,11 +94,8 @@ func Consume() config.Task {
 		log.Fatal(err)
 	}
 	msgs, err := ch.Consume(q.Name, "", false, false, false, false, nil)
-
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	v := <-msgs
-	defer v.Ack(true)
-	return utils.Decode(v.Body)
+	return ch, msgs
 }

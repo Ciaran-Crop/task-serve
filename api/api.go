@@ -1,27 +1,45 @@
 package api
 
 import (
+	"fmt"
 	"strconv"
 	"task-serve/config"
+	"task-serve/rabbitConn"
 	"task-serve/redisConn"
 	"time"
 )
 
-func CreateTask(taskName string, taskCommand string) string {
-	return ""
+func CreateTask(taskName string, taskCommand string) (string, error) {
+	global_task_id, err := redisConn.RedisIncr("global_task_id")
+	if err != nil {
+		return "", err
+	}
+	taskId := "task-" + strconv.Itoa(global_task_id)
+	task := config.Task{
+		TaskName:    taskName,
+		TaskId:      taskId,
+		TaskCommand: taskCommand,
+	}
+	err = redisConn.RedisSet(taskId, int(config.New), time.Hour*2)
+	if err != nil {
+		return "", err
+	}
+	err = rabbitConn.ProduceTask(task)
+	if err != nil {
+		redisConn.RedisDel(taskId)
+	}
+	err = redisConn.RedisSet(taskId, int(config.Ready), time.Hour*2)
+	if err != nil {
+		redisConn.RedisDel(taskId)
+		return "", err
+	}
+	fmt.Printf("Create Task : %s", task)
+	return taskId, nil
 }
 
-func SelectResult(taskId string) string {
-	status, err := redisConn.RedisGet(taskId)
-	if err != nil {
-		panic(err)
-	}
+func decodeStatus(status int) string {
 	var result string
-	val, err := strconv.Atoi(status)
-	if err != nil {
-		panic(err)
-	}
-	switch val {
+	switch status {
 	case int(config.New):
 		result = "New"
 	case int(config.Ready):
@@ -36,9 +54,24 @@ func SelectResult(taskId string) string {
 	return result
 }
 
-func UpdateTaskStatus(taskId string, status config.Status) {
-	err := redisConn.RedisSet(taskId, status, time.Hour*24)
+func SelectResult(taskId string) (string, error) {
+	status, err := redisConn.RedisGet(taskId)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
+	val, err := strconv.Atoi(status)
+	if err != nil {
+		return "", err
+	}
+	result := decodeStatus(val)
+	return result, nil
+}
+
+func UpdateTaskStatus(taskId string, status config.Status) error {
+	err := redisConn.RedisSet(taskId, int(status), time.Hour*2)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Update Task: %s to %s\n", taskId, decodeStatus(int(status)))
+	return nil
 }
