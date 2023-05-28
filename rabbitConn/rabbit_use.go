@@ -9,27 +9,44 @@ import (
 	"github.com/streadway/amqp"
 )
 
-var rbmq *amqp.Connection
-var err error
+type RabbitConnPool struct {
+	Dial func() (*amqp.Connection, error)
 
-func InitRabbitMQ() error {
-	Addr := "amqp://" + config.RABBIT_USER + ":" + config.RABBIT_PASSWORD + "@" + config.HOST + ":" + strconv.Itoa(config.RABBIT_PORT) + "/"
-	if rbmq == nil {
-		rbmq, err = amqp.Dial(Addr)
+	MinIdleConns int
+
+	IdlesChan chan *amqp.Connection
+}
+
+var (
+	Addr = "amqp://" + config.RABBIT_USER + ":" + config.RABBIT_PASSWORD + "@" + config.HOST + ":" + strconv.Itoa(config.RABBIT_PORT) + "/"
+)
+
+var rabbitConnPool *RabbitConnPool
+
+func (rc *RabbitConnPool) InitPool() error {
+	rc.IdlesChan = make(chan *amqp.Connection, rc.MinIdleConns)
+	for i := 0; i < rc.MinIdleConns; i++ {
+		rbmq, err := rc.Dial()
 		if err != nil {
 			return err
 		}
+		rc.IdlesChan <- rbmq
 	}
 	return nil
 }
 
-func CloseRabbitMQ() {
-	if rbmq != nil {
-		rbmq.Close()
-	}
+func (rc *RabbitConnPool) Get() *amqp.Connection {
+	rbmq := <-rc.IdlesChan
+	return rbmq
 }
 
-func ProduceTask(task config.Task) error {
+func (rc *RabbitConnPool) Release(rbmq *amqp.Connection) {
+	rc.IdlesChan <- rbmq
+}
+
+func (rc *RabbitConnPool) ProduceTask(task *config.Task) error {
+	rbmq := rc.Get()
+	defer rc.Release(rbmq)
 	// 获取channel
 	ch, err := rbmq.Channel()
 	if err != nil {
@@ -65,8 +82,10 @@ func ProduceTask(task config.Task) error {
 	return nil
 }
 
-func Consume() (*amqp.Channel, <-chan amqp.Delivery) {
+func (rc *RabbitConnPool) Consume() (*amqp.Channel, <-chan amqp.Delivery) {
 	// 获取channel
+	rbmq := rc.Get()
+	defer rc.Release(rbmq)
 	ch, err := rbmq.Channel()
 	if err != nil {
 		log.Fatal(err)
@@ -98,4 +117,23 @@ func Consume() (*amqp.Channel, <-chan amqp.Delivery) {
 		panic(err)
 	}
 	return ch, msgs
+}
+
+func GetRabbitPool() *RabbitConnPool {
+	return rabbitConnPool
+}
+
+func InitRabbitMQ() {
+	rabbitConnPool = &RabbitConnPool{
+		Dial: func() (*amqp.Connection, error) {
+			return amqp.Dial(Addr)
+		},
+		MinIdleConns: 3,
+	}
+
+	rabbitConnPool.InitPool()
+}
+
+func CloseRabbitMQ() {
+	rabbitConnPool = nil
 }

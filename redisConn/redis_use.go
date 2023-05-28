@@ -17,8 +17,10 @@ func InitRedis() {
 	Addr := config.HOST + ":" + strconv.Itoa(config.REDIS_PORT)
 	if rdb == nil {
 		rdb = redis.NewClient(&redis.Options{
-			Addr: Addr,
-			DB:   0,
+			Addr:         Addr,
+			DB:           0,
+			MinIdleConns: 1,  // 最小闲置连接数
+			MaxIdleConns: 10, // 最大闲置连接数
 		})
 	}
 	if ctx == nil {
@@ -30,6 +32,13 @@ func CloseRedis() {
 	if rdb != nil {
 		rdb.Close()
 	}
+}
+
+func GetClient() (*redis.Client, context.Context, error) {
+	if rdb != nil && ctx != nil {
+		return rdb, ctx, nil
+	}
+	return nil, nil, fmt.Errorf("rdb is %v, ctx is %v", rdb, ctx)
 }
 
 func RedisSet(key string, value interface{}, expiration time.Duration) error {
@@ -59,4 +68,11 @@ func RedisIncr(key string) (int, error) {
 
 func RedisDel(key string) {
 	rdb.Del(ctx, key)
+}
+
+func RedisDelKeys() {
+	taskList, _ := rdb.Keys(ctx, "task-*").Result()
+	for _, taskId := range taskList {
+		RedisDel(taskId)
+	}
 }

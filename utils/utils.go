@@ -16,11 +16,11 @@ func Encode(data interface{}) []byte {
 	return b.Bytes()
 }
 
-func Decode(data []byte) config.Task {
+func Decode(data []byte) *config.Task {
 	b := bytes.NewBuffer(data)
-	var task config.Task
+	task := &config.Task{}
 	dec := gob.NewDecoder(b)
-	err := dec.Decode(&task)
+	err := dec.Decode(task)
 	if err != nil {
 		panic(err)
 	}

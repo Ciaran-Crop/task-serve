@@ -7,26 +7,19 @@ import (
 	"task-serve/api"
 	"task-serve/rabbitConn"
 	"task-serve/redisConn"
+	"task-serve/web"
 )
 
-func InitConnection() {
-	redisConn.InitRedis()
-	rabbitConn.InitRabbitMQ()
-}
-
-func CloseConnection() {
-	redisConn.CloseRedis()
-	rabbitConn.CloseRabbitMQ()
-}
-
-func main() {
+func shellProcess() {
 	var serve = flag.String("s", "api", "选择启动服务[api / algo]")
 	var op = flag.String("op", "select", "选择操作[select / create]")
 	var taskName = flag.String("tname", "", "任务名")
 	var taskId = flag.String("tid", "", "任务id")
 	var taskCommand = flag.String("tcommand", "", "任务命令")
-	InitConnection()
-	defer CloseConnection()
+	rabbitConn.InitRabbitMQ()
+	redisConn.InitRedis()
+	defer redisConn.CloseRedis()
+	defer rabbitConn.CloseRabbitMQ()
 	flag.Parse()
 	if *serve == "api" {
 		if *op == "select" {
@@ -59,4 +52,18 @@ func main() {
 	} else {
 		flag.Usage()
 	}
+}
+
+func webProcess() {
+	rabbitConn.InitRabbitMQ()
+	redisConn.InitRedis()
+	defer redisConn.CloseRedis()
+	defer rabbitConn.CloseRabbitMQ()
+	web.RunSimpleServer()
+	// web.RunTaskServer()
+}
+
+func main() {
+	// shellProcess()
+	webProcess()
 }

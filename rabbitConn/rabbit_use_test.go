@@ -4,36 +4,21 @@ import (
 	"fmt"
 	"task-serve/config"
 	"task-serve/rabbitConn"
-	"task-serve/redisConn"
 	"task-serve/utils"
 	"testing"
+	"time"
 )
 
-func TestConn(t *testing.T) {
-	err := rabbitConn.InitRabbitMQ()
-	if err != nil {
-		t.Errorf("Connect Error!")
-		fmt.Println(err)
-	}
-}
-
-func InitConnection() {
-	redisConn.InitRedis()
-	rabbitConn.InitRabbitMQ()
-}
-
-func CloseConnection() {
-	redisConn.CloseRedis()
-	rabbitConn.CloseRabbitMQ()
-}
-
 func TestProduce(t *testing.T) {
-	InitConnection()
-	defer CloseConnection()
-	err := rabbitConn.ProduceTask(config.Task{
+	rabbitConn.InitRabbitMQ()
+	defer rabbitConn.CloseRabbitMQ()
+	rabbitConnPool := rabbitConn.GetRabbitPool()
+	err := rabbitConnPool.ProduceTask(&config.Task{
 		TaskName:    "Test",
 		TaskId:      "2",
 		TaskCommand: "print('hello world')",
+		TaskTime:    time.Now().UnixMilli(),
+		TaskStatus:  config.New,
 	})
 	if err != nil {
 		t.Errorf("Produce Error!")
@@ -42,13 +27,14 @@ func TestProduce(t *testing.T) {
 }
 
 func TestConsume(t *testing.T) {
-	InitConnection()
-	defer CloseConnection()
-	ch, msgs := rabbitConn.Consume()
+	rabbitConn.InitRabbitMQ()
+	defer rabbitConn.CloseRabbitMQ()
+	rabbitConnPool := rabbitConn.GetRabbitPool()
+	ch, msgs := rabbitConnPool.Consume()
 	defer ch.Close()
 	for v := range msgs {
 		task := utils.Decode(v.Body)
 		v.Ack(true)
-		fmt.Printf("Get Task : %s", task)
+		fmt.Printf("Get Task : %v", task)
 	}
 }

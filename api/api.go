@@ -10,31 +10,54 @@ import (
 )
 
 func CreateTask(taskName string, taskCommand string) (string, error) {
-	global_task_id, err := redisConn.RedisIncr("global_task_id")
+	redisClient, redisCtx, err := redisConn.GetClient()
+	rabbitConnPool := rabbitConn.GetRabbitPool()
 	if err != nil {
 		return "", err
 	}
+	val, err := redisClient.IncrBy(redisCtx, "global_task_id", 1).Result()
+	if err != nil {
+		return "", err
+	}
+	global_task_id := int(val)
 	taskId := "task-" + strconv.Itoa(global_task_id)
-	task := config.Task{
+	now_time := time.Now().UnixMilli()
+	task := &config.Task{
 		TaskName:    taskName,
 		TaskId:      taskId,
 		TaskCommand: taskCommand,
+		TaskTime:    now_time,
+		TaskStatus:  config.New,
 	}
-	err = redisConn.RedisSet(taskId, int(config.New), time.Hour*2)
+	_, err = redisClient.HSet(redisCtx, taskId, task.GetMap()).Result()
 	if err != nil {
-		return "", err
+		return taskId, err
 	}
-	err = rabbitConn.ProduceTask(task)
+
+	err = rabbitConnPool.ProduceTask(task)
 	if err != nil {
-		redisConn.RedisDel(taskId)
+		redisClient.HSet(redisCtx, taskId, "Status", config.Error)
+		return taskId, err
 	}
-	err = redisConn.RedisSet(taskId, int(config.Ready), time.Hour*2)
-	if err != nil {
-		redisConn.RedisDel(taskId)
-		return "", err
-	}
-	fmt.Printf("Create Task : %s", task)
+
 	return taskId, nil
+}
+
+func CancelTask(taskId string) error {
+	rabbitConnPool := rabbitConn.GetRabbitPool()
+	now_time := time.Now().UnixMilli()
+	task := &config.Task{
+		TaskName:    "cancel-task",
+		TaskId:      taskId,
+		TaskCommand: "cancel",
+		TaskTime:    now_time,
+		TaskStatus:  config.Cancel,
+	}
+	err := rabbitConnPool.ProduceTask(task)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func decodeStatus(status int) string {
@@ -48,6 +71,8 @@ func decodeStatus(status int) string {
 		result = "Run"
 	case int(config.Finish):
 		result = "Finish"
+	case int(config.Cancel):
+		result = "Cancel"
 	default:
 		result = "Error"
 	}
@@ -55,7 +80,11 @@ func decodeStatus(status int) string {
 }
 
 func SelectResult(taskId string) (string, error) {
-	status, err := redisConn.RedisGet(taskId)
+	redisClient, redisCtx, err := redisConn.GetClient()
+	if err != nil {
+		return "", err
+	}
+	status, err := redisClient.HGet(redisCtx, taskId, "Status").Result()
 	if err != nil {
 		return "", err
 	}
@@ -68,10 +97,52 @@ func SelectResult(taskId string) (string, error) {
 }
 
 func UpdateTaskStatus(taskId string, status config.Status) error {
-	err := redisConn.RedisSet(taskId, int(status), time.Hour*2)
+	redisClient, redisCtx, err := redisConn.GetClient()
+	if err != nil {
+		return err
+	}
+	status1, err := redisClient.HGet(redisCtx, taskId, "Status").Result()
+	if err != nil {
+		return err
+	}
+	beforeStatus, err := strconv.Atoi(status1)
+	if err != nil {
+		return err
+	}
+	if !checkUpdate(config.Status(beforeStatus), status) {
+		if config.Status(beforeStatus) == config.Cancel {
+			return nil
+		}
+		return fmt.Errorf("can't update status from %v to %v", decodeStatus(beforeStatus), decodeStatus(int(status)))
+	}
+	_, err = redisClient.HSet(redisCtx, taskId, "Status", status).Result()
 	if err != nil {
 		return err
 	}
 	fmt.Printf("Update Task: %s to %s\n", taskId, decodeStatus(int(status)))
 	return nil
+}
+
+// New -> Ready -> Run -> Finish
+// ALL(except Finish) -> Error
+// New,Ready,Run -> Cancel
+func checkUpdate(status1 config.Status, status2 config.Status) bool {
+	if status2 == config.Error && status1 != config.Finish {
+		return true
+	}
+	switch status1 {
+	case config.New:
+		if status2 == config.Ready || status2 == config.Cancel {
+			return true
+		}
+	case config.Ready:
+		if status2 == config.Run || status2 == config.Cancel {
+			return true
+		}
+	case config.Run:
+		if status2 == config.Finish || status2 == config.Cancel {
+			return true
+		}
+	}
+	return false
 }

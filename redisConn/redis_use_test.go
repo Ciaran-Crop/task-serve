@@ -10,60 +10,109 @@ import (
 
 func TestGet(t *testing.T) {
 	redisConn.InitRedis()
-	if ans, err := redisConn.RedisGet("test_a"); ans != "bbb" || err != nil {
+	redisClient, redisCtx, err := redisConn.GetClient()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if ans, err := redisClient.Get(redisCtx, "test_a").Result(); ans != "bbb" || err != nil {
 		t.Errorf("test_get expected be 'bbb', but get %s", ans)
 	}
 }
 
 func TestSet(t *testing.T) {
 	redisConn.InitRedis()
-	err := redisConn.RedisSet("test_b", "bbb", time.Hour)
+	redisClient, redisCtx, err := redisConn.GetClient()
 	if err != nil {
-		t.Error("redis set error", err)
+		t.Errorf(err.Error())
 	}
-	if ans, err := redisConn.RedisGet("test_b"); ans != "bbb" || err != nil {
-		t.Errorf("test_set expected be 'bbb', but get %s", ans)
+	if _, err := redisClient.Set(redisCtx, "test_b", "bbb", 0).Result(); err != nil {
+		t.Errorf(err.Error())
 	}
 }
 
-func TestSetStatus(t *testing.T) {
+func TestTask(t *testing.T) {
 	redisConn.InitRedis()
-	err := redisConn.RedisSet("test_c", int(config.New), time.Hour)
-	if err != nil {
-		t.Error("redis set error", err)
+	task := &config.Task{
+		TaskName:    "test-task",
+		TaskId:      "test_c",
+		TaskCommand: "none",
+		TaskTime:    time.Now().UnixMilli(),
+		TaskStatus:  config.New,
 	}
-	ans, err := redisConn.RedisGet("test_c")
+	redisClient, redisCtx, err := redisConn.GetClient()
 	if err != nil {
-		t.Error("redis get error", err)
+		t.Errorf(err.Error())
 	}
-	if status, err := strconv.Atoi(ans); status != int(config.New) || err != nil {
-		t.Errorf("test_status expected be '0', but get %s", ans)
+	if _, err := redisClient.HSet(redisCtx, task.TaskId, task.GetMap()).Result(); err != nil {
+		t.Errorf(err.Error())
+	}
+	val, err := redisClient.HGet(redisCtx, task.TaskId, "Status").Result()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	intVal, err := strconv.Atoi(val)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if intVal != int(config.New) {
+		t.Errorf("HSet status failed : %v", intVal)
+	}
+	if _, err = redisClient.HSet(redisCtx, task.TaskId, "Status", config.Finish).Result(); err != nil {
+		t.Errorf(err.Error())
+	}
+	val, err = redisClient.HGet(redisCtx, task.TaskId, "Status").Result()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	intVal, err = strconv.Atoi(val)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if intVal != int(config.Finish) {
+		t.Errorf("HSet status failed : %v", intVal)
 	}
 }
 
 func TestIncr(t *testing.T) {
 	redisConn.InitRedis()
-	oldVal, err := redisConn.RedisGet("test_d")
+	redisClient, redisCtx, err := redisConn.GetClient()
 	if err != nil {
-		panic(err)
+		t.Errorf(err.Error())
 	}
-	val, err := redisConn.RedisIncr("test_d")
+	oldVal, err := redisClient.Get(redisCtx, "test_d").Result()
 	if err != nil {
-		t.Error("redis incr error", err)
+		t.Errorf(err.Error())
+	}
+	val, err := redisClient.IncrBy(redisCtx, "test_d", 1).Result()
+	if err != nil {
+		t.Errorf(err.Error())
 	}
 	oldIntVal, err := strconv.Atoi(oldVal)
 	if err != nil {
-		panic(err)
+		t.Errorf(err.Error())
 	}
-	if oldIntVal != val-1 {
+	if oldIntVal != int(val-1) {
 		t.Errorf("test_incr expected be oldIntVal == val - 1, but get oldIntVal = %d, val = %d", oldIntVal, val)
 	}
 }
 
 func TestDel(t *testing.T) {
 	redisConn.InitRedis()
-	redisConn.RedisDel("test_e")
-	if val, err := redisConn.RedisGet("test_e"); err == nil {
-		t.Errorf("test_del expected get errror, but get val %s", val)
+	redisClient, redisCtx, err := redisConn.GetClient()
+	if err != nil {
+		t.Errorf(err.Error())
 	}
+	if _, err := redisClient.Del(redisCtx, "test_e").Result(); err != nil {
+		t.Errorf(err.Error())
+	}
+}
+
+func TestDelAllTask(t *testing.T) {
+	redisConn.InitRedis()
+	redisClient, redisCtx, err := redisConn.GetClient()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	taskList, _ := redisClient.Keys(redisCtx, "task-*").Result()
+	redisClient.Del(redisCtx, taskList...)
 }

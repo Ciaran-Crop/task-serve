@@ -9,58 +9,48 @@ import (
 	"testing"
 )
 
-func InitConnection() {
-	redisConn.InitRedis()
-	rabbitConn.InitRabbitMQ()
-}
-
-func CloseConnection() {
-	redisConn.CloseRedis()
-	rabbitConn.CloseRabbitMQ()
-}
-
 func TestCreateTask(t *testing.T) {
-	InitConnection()
-	defer CloseConnection()
+	rabbitConn.InitRabbitMQ()
+	redisConn.InitRedis()
 	taskId, err := api.CreateTask("test_create_task", "print('hello world')")
 	if err != nil {
-		t.Error("create task error", err)
+		t.Error(err.Error())
 	}
 	fmt.Println(taskId)
 }
 
 func TestSelectResult(t *testing.T) {
-	InitConnection()
-	defer CloseConnection()
+	rabbitConn.InitRabbitMQ()
+	redisConn.InitRedis()
 	taskId, err := api.CreateTask("test_create_task", "print('hello world')")
 	if err != nil {
-		t.Error("create task error", err)
+		t.Error(err.Error())
 	}
 	status, err := api.SelectResult(taskId)
 	if err != nil {
 		t.Error("select status error", err)
 	}
-	if status != "Ready" {
+	if status != "New" {
 		t.Errorf("test select result expected status == Ready, but get status: %s", status)
 	}
 }
 
 func TestUpdateState(t *testing.T) {
-	InitConnection()
-	defer CloseConnection()
+	rabbitConn.InitRabbitMQ()
+	redisConn.InitRedis()
 	taskId, err := api.CreateTask("test_create_task", "print('hello world')")
 	if err != nil {
-		t.Error("create task error", err)
+		t.Error(err.Error())
 	}
-	err = api.UpdateTaskStatus(taskId, config.Finish)
+	err = api.UpdateTaskStatus(taskId, config.Ready)
 	if err != nil {
-		t.Error("create task error", err)
+		t.Error(err.Error())
 	}
 	status, err := api.SelectResult(taskId)
 	if err != nil {
 		panic(err)
 	}
-	if status != "Finish" {
+	if status != "Ready" {
 		t.Errorf("test select result expected status == Finish, but get status: %s", status)
 	}
 }
