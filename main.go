@@ -57,10 +57,11 @@ func shellProcess() {
 func webProcess() {
 	rabbitConn.InitRabbitMQ()
 	redisConn.InitRedis()
+	go algorithm.RunServe()
 	defer redisConn.CloseRedis()
 	defer rabbitConn.CloseRabbitMQ()
-	web.RunSimpleServer()
-	// web.RunTaskServer()
+	// web.RunSimpleServer()
+	web.RunTaskServer()
 }
 
 func main() {

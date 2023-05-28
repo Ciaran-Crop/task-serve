@@ -37,7 +37,7 @@ func TestTask(t *testing.T) {
 		TaskId:      "test_c",
 		TaskCommand: "none",
 		TaskTime:    time.Now().UnixMilli(),
-		TaskStatus:  config.New,
+		TaskStatus:  config.Cancel,
 	}
 	redisClient, redisCtx, err := redisConn.GetClient()
 	if err != nil {
@@ -54,7 +54,7 @@ func TestTask(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	if intVal != int(config.New) {
+	if intVal != int(config.Cancel) {
 		t.Errorf("HSet status failed : %v", intVal)
 	}
 	if _, err = redisClient.HSet(redisCtx, task.TaskId, "Status", config.Finish).Result(); err != nil {

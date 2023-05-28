@@ -39,6 +39,14 @@ func (s Status) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data, &s)
 }
 
+func (s *Task) MarshalBinary() ([]byte, error) {
+	return json.Marshal(s)
+}
+
+func (s *Task) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, &s)
+}
+
 func (t *Task) String() string {
 	return fmt.Sprintf("TaskName: %v, TaskId: %v, TaskCommand: %v, TaskTime: %v, TaskStatus: %v\n", t.TaskName, t.TaskId, t.TaskCommand, t.TaskTime, t.TaskStatus)
 }

@@ -1,7 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
 	"sync"
 	"task-serve/algorithm"
 	"task-serve/api"
@@ -126,4 +130,66 @@ func TestCancelMultiTask(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestHttpCreate(t *testing.T) {
+	url := "http://localhost:9001/create_task"
+	rep, err := http.Post(url, "application/x-www-form-urlencoded", strings.NewReader("task_name=http_create_test&task_command=HelloWorld"))
+	if err != nil {
+		t.Error(err.Error())
+	}
+	defer rep.Body.Close()
+	bytes, _ := ioutil.ReadAll(rep.Body)
+	m := make(map[string]interface{})
+	json.Unmarshal(bytes, &m)
+	fmt.Println(m)
+	fmt.Println(m["result"], m["task_id"])
+}
+
+func TestHttpGetOneTask(t *testing.T) {
+	taskId := "task-43"
+	// rep, err := http.Post("http://localhost:9001/view_task", "application/x-www-form-urlencoded", strings.NewReader(fmt.Sprintf("task_id=%s", taskId)))
+	rep, err := http.Get("http://localhost:9001/view_task" + "?task_id=" + taskId)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	defer rep.Body.Close()
+	bytes, _ := ioutil.ReadAll(rep.Body)
+	m := make(map[string]interface{})
+	json.Unmarshal(bytes, &m)
+	fmt.Println(m)
+}
+
+func TestHttpGetTaskList(t *testing.T) {
+	rep, err := http.Get("http://localhost:9001/get_task_list")
+	if err != nil {
+		t.Error(err.Error())
+	}
+	defer rep.Body.Close()
+	bytes, _ := ioutil.ReadAll(rep.Body)
+	m := make(map[string]interface{})
+	json.Unmarshal(bytes, &m)
+	fmt.Println(m)
+}
+
+func TestHttpCancel(t *testing.T) {
+	url := "http://localhost:9001/create_task"
+	rep, err := http.Post(url, "application/x-www-form-urlencoded", strings.NewReader("task_name=http_create_test&task_command=HelloWorld"))
+	if err != nil {
+		t.Error(err.Error())
+	}
+	defer rep.Body.Close()
+	bytes, _ := ioutil.ReadAll(rep.Body)
+	m := make(map[string]interface{})
+	json.Unmarshal(bytes, &m)
+	fmt.Println(m)
+	// time.Sleep(time.Second * 1)
+	rep, err = http.Get(fmt.Sprintf("http://localhost:9001/cancel_task?task_id=%s", m["task_id"]))
+	if err != nil {
+		t.Error(err.Error())
+	}
+	bytes, _ = ioutil.ReadAll(rep.Body)
+	m = make(map[string]interface{})
+	json.Unmarshal(bytes, &m)
+	fmt.Println(m)
 }

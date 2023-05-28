@@ -20,7 +20,9 @@ func doAlgo(task *config.Task, ctx context.Context) {
 			return
 		default:
 			err := api.UpdateTaskStatus(task.TaskId, config.Run)
-			taskFail(task.TaskId, err)
+			if ok := taskFail(task.TaskId, err); ok {
+				return
+			}
 			fmt.Printf("Start Task : %s", task)
 			taskOp.DoHelloWorld()
 			err = api.UpdateTaskStatus(task.TaskId, config.Finish)
@@ -31,10 +33,12 @@ func doAlgo(task *config.Task, ctx context.Context) {
 	}
 }
 
-func taskFail(taskId string, err error) {
+func taskFail(taskId string, err error) bool {
 	if err != nil {
 		api.UpdateTaskStatus(taskId, config.Error)
+		return true
 	}
+	return false
 }
 
 func RunServe() {
@@ -47,16 +51,16 @@ func RunServe() {
 		for v := range msgs {
 			task := utils.Decode(v.Body)
 			v.Ack(true)
-			status, err := api.SelectResult(task.TaskId)
-			taskFail(task.TaskId, err)
-			if status == "New" {
-				fmt.Printf("Get Task : %s", task)
+			status := task.TaskStatus
+			if status == config.New {
+				fmt.Printf("Get Task : %s\n", task)
 				err := api.UpdateTaskStatus(task.TaskId, config.Ready)
 				taskFail(task.TaskId, err)
 				ctx, cancel := context.WithCancel(context.Background())
 				ctxMap[task.TaskId] = cancel
 				go doAlgo(task, ctx)
-			} else if status == "Cancel" {
+			} else if status == config.Cancel {
+				fmt.Printf("Get Cancel Task : %s\n", task.TaskId)
 				CancelTask(task.TaskId)
 			}
 		}

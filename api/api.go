@@ -60,7 +60,7 @@ func CancelTask(taskId string) error {
 	return nil
 }
 
-func decodeStatus(status int) string {
+func DecodeStatus(status int) string {
 	var result string
 	switch status {
 	case int(config.New):
@@ -92,7 +92,7 @@ func SelectResult(taskId string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	result := decodeStatus(val)
+	result := DecodeStatus(val)
 	return result, nil
 }
 
@@ -113,13 +113,13 @@ func UpdateTaskStatus(taskId string, status config.Status) error {
 		if config.Status(beforeStatus) == config.Cancel {
 			return nil
 		}
-		return fmt.Errorf("can't update status from %v to %v", decodeStatus(beforeStatus), decodeStatus(int(status)))
+		return fmt.Errorf("can't update status from %v to %v", DecodeStatus(beforeStatus), DecodeStatus(int(status)))
 	}
 	_, err = redisClient.HSet(redisCtx, taskId, "Status", status).Result()
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Update Task: %s to %s\n", taskId, decodeStatus(int(status)))
+	fmt.Printf("Update Task: %s to %s\n", taskId, DecodeStatus(int(status)))
 	return nil
 }
 
@@ -145,4 +145,47 @@ func checkUpdate(status1 config.Status, status2 config.Status) bool {
 		}
 	}
 	return false
+}
+
+func GetTasks() ([]*config.Task, error) {
+	redisClient, redisCtx, err := redisConn.GetClient()
+	if err != nil {
+		return nil, err
+	}
+
+	taskKeys, err := redisClient.Keys(redisCtx, "task-*").Result()
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]*config.Task, 0)
+	for _, key := range taskKeys {
+		taskOne, err := GetOneTask(key)
+		if err != nil {
+			continue
+		}
+		list = append(list, taskOne)
+	}
+	return list, nil
+}
+
+func GetOneTask(taskId string) (*config.Task, error) {
+	redisClient, redisCtx, err := redisConn.GetClient()
+	if err != nil {
+		return nil, err
+	}
+	taskMap, err := redisClient.HGetAll(redisCtx, taskId).Result()
+	if err != nil {
+		return nil, err
+	}
+	taskTime, _ := strconv.ParseInt(taskMap["TaskTime"], 10, 64)
+	taskStatus, _ := strconv.Atoi(taskMap["Status"])
+	task := &config.Task{
+		TaskName:    taskMap["TaskName"],
+		TaskId:      taskMap["TaskId"],
+		TaskCommand: taskMap["TaskCommand"],
+		TaskTime:    taskTime,
+		TaskStatus:  config.Status(taskStatus),
+	}
+	return task, nil
 }
