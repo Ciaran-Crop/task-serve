@@ -2,11 +2,12 @@ package api_test
 
 import (
 	"fmt"
-	"task-serve/api"
-	"task-serve/config"
-	"task-serve/rabbitConn"
-	"task-serve/redisConn"
 	"testing"
+
+	"github.com/Ciaran-crop/task-serve/api"
+	"github.com/Ciaran-crop/task-serve/config"
+	"github.com/Ciaran-crop/task-serve/rabbitConn"
+	"github.com/Ciaran-crop/task-serve/redisConn"
 )
 
 func TestCreateTask(t *testing.T) {

@@ -3,9 +3,9 @@ package rabbitConn
 import (
 	"log"
 	"strconv"
-	"task-serve/config"
-	"task-serve/utils"
 
+	"github.com/Ciaran-crop/task-serve/config"
+	"github.com/Ciaran-crop/task-serve/utils"
 	"github.com/streadway/amqp"
 )
 

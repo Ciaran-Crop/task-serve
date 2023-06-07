@@ -2,10 +2,11 @@ package redisConn_test
 
 import (
 	"strconv"
-	"task-serve/config"
-	"task-serve/redisConn"
 	"testing"
 	"time"
+
+	"github.com/Ciaran-crop/task-serve/config"
+	"github.com/Ciaran-crop/task-serve/redisConn"
 )
 
 func TestGet(t *testing.T) {

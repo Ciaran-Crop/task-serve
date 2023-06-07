@@ -7,13 +7,14 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"task-serve/algorithm"
-	"task-serve/api"
-	"task-serve/config"
-	"task-serve/rabbitConn"
-	"task-serve/redisConn"
 	"testing"
 	"time"
+
+	"github.com/Ciaran-crop/task-serve/algorithm"
+	"github.com/Ciaran-crop/task-serve/api"
+	"github.com/Ciaran-crop/task-serve/config"
+	"github.com/Ciaran-crop/task-serve/rabbitConn"
+	"github.com/Ciaran-crop/task-serve/redisConn"
 )
 
 func TestOneTask(t *testing.T) {

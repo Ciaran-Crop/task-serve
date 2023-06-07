@@ -2,11 +2,12 @@ package rabbitConn_test
 
 import (
 	"fmt"
-	"task-serve/config"
-	"task-serve/rabbitConn"
-	"task-serve/utils"
 	"testing"
 	"time"
+
+	"github.com/Ciaran-crop/task-serve/config"
+	"github.com/Ciaran-crop/task-serve/rabbitConn"
+	"github.com/Ciaran-crop/task-serve/utils"
 )
 
 func TestProduce(t *testing.T) {

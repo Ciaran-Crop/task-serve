@@ -3,10 +3,11 @@ package api
 import (
 	"fmt"
 	"strconv"
-	"task-serve/config"
-	"task-serve/rabbitConn"
-	"task-serve/redisConn"
 	"time"
+
+	"github.com/Ciaran-crop/task-serve/config"
+	"github.com/Ciaran-crop/task-serve/rabbitConn"
+	"github.com/Ciaran-crop/task-serve/redisConn"
 )
 
 func CreateTask(taskName string, taskCommand string) (string, error) {

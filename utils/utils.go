@@ -3,7 +3,8 @@ package utils
 import (
 	"bytes"
 	"encoding/gob"
-	"task-serve/config"
+
+	"github.com/Ciaran-crop/task-serve/config"
 )
 
 func Encode(data interface{}) []byte {

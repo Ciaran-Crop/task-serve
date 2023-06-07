@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"task-serve/algorithm"
-	"task-serve/api"
-	"task-serve/rabbitConn"
-	"task-serve/redisConn"
-	"task-serve/web"
+
+	"github.com/Ciaran-crop/task-serve/algorithm"
+	"github.com/Ciaran-crop/task-serve/api"
+	"github.com/Ciaran-crop/task-serve/rabbitConn"
+	"github.com/Ciaran-crop/task-serve/redisConn"
+	"github.com/Ciaran-crop/task-serve/web"
 )
 
 func shellProcess() {

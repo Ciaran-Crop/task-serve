@@ -1,8 +1,9 @@
 package taskOp_test
 
 import (
-	"task-serve/taskOp"
 	"testing"
+
+	"github.com/Ciaran-crop/task-serve/taskOp"
 )
 
 func TestDoHelloWorld(t *testing.T) {

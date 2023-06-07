@@ -3,11 +3,12 @@ package algorithm
 import (
 	"context"
 	"fmt"
-	"task-serve/api"
-	"task-serve/config"
-	"task-serve/rabbitConn"
-	"task-serve/taskOp"
-	"task-serve/utils"
+
+	"github.com/Ciaran-crop/task-serve/api"
+	"github.com/Ciaran-crop/task-serve/config"
+	"github.com/Ciaran-crop/task-serve/rabbitConn"
+	"github.com/Ciaran-crop/task-serve/taskOp"
+	"github.com/Ciaran-crop/task-serve/utils"
 )
 
 var wait chan bool
